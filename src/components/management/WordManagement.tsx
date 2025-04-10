@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import { Word } from '../../types/supabase';
+import { Word, Emotion } from '../../types/supabase';
 import WordAddModal from './WordAddModal';
 import WordEditModal from './WordEditModal';
 import { Button } from '../ui/button';
@@ -9,18 +9,38 @@ import { toast } from 'sonner';
 
 const WordManagement: React.FC = () => {
   const [words, setWords] = useState<Word[]>([]);
+  const [emotions, setEmotions] = useState<Emotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
 
   useEffect(() => {
+    fetchEmotions();
     fetchWords();
   }, []);
+
+  const fetchEmotions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('emotions')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      setEmotions(data || []);
+    } catch (error) {
+      console.error('Error fetching emotions:', error);
+      toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
+    }
+  };
 
   const fetchWords = async () => {
     try {
       setLoading(true);
+      console.log('กำลังโหลดข้อมูลคำ...');
       const { data, error } = await supabase
         .from('words')
         .select('*')
@@ -30,6 +50,7 @@ const WordManagement: React.FC = () => {
         throw error;
       }
 
+      console.log('ข้อมูลคำที่ได้รับ:', data);
       setWords(data || []);
     } catch (error) {
       console.error('Error fetching words:', error);
@@ -37,6 +58,12 @@ const WordManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getEmotionName = (emotionId: string | null) => {
+    if (!emotionId) return '-';
+    const emotion = emotions.find(e => e.id === emotionId);
+    return emotion ? emotion.name : emotionId;
   };
 
   const handleAddWord = () => {
@@ -71,7 +98,10 @@ const WordManagement: React.FC = () => {
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-semibold">จัดการคำ</h2>
-        <Button onClick={handleAddWord}>เพิ่มคำใหม่</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchWords}>รีเฟรช</Button>
+          <Button onClick={handleAddWord}>เพิ่มคำใหม่</Button>
+        </div>
       </div>
 
       {loading ? (
@@ -97,7 +127,7 @@ const WordManagement: React.FC = () => {
                 <tr key={word.id}>
                   <td className="px-6 py-4 whitespace-nowrap">{word.word}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{word.meaning || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{word.emotion_id || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{getEmotionName(word.emotion_id)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span 
                       className={`px-2 py-1 rounded text-xs font-semibold 
