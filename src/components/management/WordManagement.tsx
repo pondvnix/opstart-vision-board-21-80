@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { supabase, deleteWordAndRelatedRecords, fetchEmotions } from '../../lib/supabaseClient';
+import { supabase, deleteWordAndRelatedRecords, fetchEmotions, ensureBasicEmotions } from '../../lib/supabaseClient';
 import { Word, Emotion } from '../../types/supabase';
 import WordAddModal from './WordAddModal';
 import WordEditModal from './WordEditModal';
@@ -16,17 +15,34 @@ const WordManagement: React.FC = () => {
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
 
   useEffect(() => {
-    fetchEmotionsData();
-    fetchWords();
+    initializeData();
   }, []);
+
+  const initializeData = async () => {
+    try {
+      await ensureBasicEmotions();
+      await Promise.all([
+        fetchEmotionsData(),
+        fetchWords()
+      ]);
+    } catch (error) {
+      console.error('Error initializing data:', error);
+      toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูลพื้นฐาน');
+    }
+  };
 
   const fetchEmotionsData = async () => {
     try {
+      setLoading(true);
+      console.log('Fetching emotions data...');
       const emotionsData = await fetchEmotions();
+      console.log('Emotions data received:', emotionsData);
       setEmotions(emotionsData);
     } catch (error) {
       console.error('Error fetching emotions:', error);
       toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
+    } finally {
+      setLoading(false);
     }
   };
 

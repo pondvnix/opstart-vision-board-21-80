@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase, fetchEmotions } from '../../lib/supabaseClient';
+import { supabase, fetchEmotions, ensureBasicEmotions } from '../../lib/supabaseClient';
 import { Word, Emotion } from '../../types/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -34,9 +34,13 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
   const loadEmotions = async () => {
     try {
       setLoadingEmotions(true);
-      // ใช้ฟังก์ชั่นดึงข้อมูลอารมณ์ที่ปรับปรุงแล้ว
+      
+      // ตรวจสอบและสร้างอารมณ์พื้นฐาน
+      await ensureBasicEmotions();
+      
+      // ดึงข้อมูลอารมณ์ทั้งหมด
       const emotionsData = await fetchEmotions();
-      console.log('Loaded emotions:', emotionsData);
+      console.log('Loaded emotions for EditModal:', emotionsData);
       setEmotions(emotionsData || []);
     } catch (error) {
       console.error('Error fetching emotions:', error);

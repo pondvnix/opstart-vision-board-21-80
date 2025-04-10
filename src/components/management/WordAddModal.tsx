@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase, fetchEmotions, createEmotionIfNotExists } from '../../lib/supabaseClient';
+import { supabase, fetchEmotions, createEmotionIfNotExists, ensureBasicEmotions } from '../../lib/supabaseClient';
 import { Emotion } from '../../types/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -25,18 +25,29 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
   const [loadingEmotions, setLoadingEmotions] = useState(true);
 
   useEffect(() => {
+    // ตรวจสอบและสร้างอารมณ์พื้นฐานก่อนโหลดข้อมูลอื่น
     loadEmotions();
   }, []);
 
   const loadEmotions = async () => {
     try {
       setLoadingEmotions(true);
-      // ใช้ฟังก์ชั่นดึงข้อมูลอารมณ์ที่ปรับปรุงแล้ว
+      
+      // ตรวจสอบและสร้างอารมณ์พื้นฐาน
+      await ensureBasicEmotions();
+      
+      // ดึงข้อมูลอารมณ์ทั้งหมด
       const emotionsData = await fetchEmotions();
-      console.log('Loaded emotions:', emotionsData);
+      console.log('Loaded emotions for AddModal:', emotionsData);
       setEmotions(emotionsData || []);
+      
+      // ตั้งค่าอารมณ์เริ่มต้นเป็น "positive" ถ้ามี
+      const positiveEmotion = emotionsData.find(e => e.name === 'positive');
+      if (positiveEmotion) {
+        setEmotionId(positiveEmotion.id);
+      }
     } catch (error) {
-      console.error('Error fetching emotions:', error);
+      console.error('Error loading emotions:', error);
       toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
     } finally {
       setLoadingEmotions(false);
