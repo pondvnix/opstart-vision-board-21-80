@@ -43,6 +43,7 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
         throw error;
       }
 
+      console.log('Loaded emotions:', data);
       setEmotions(data || []);
     } catch (error) {
       console.error('Error fetching emotions:', error);
@@ -158,3 +159,4 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
 };
 
 export default WordEditModal;
+

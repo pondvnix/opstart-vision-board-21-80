@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, getEmotionByName } from '../../lib/supabaseClient';
 import { Emotion } from '../../types/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -40,6 +40,7 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
         throw error;
       }
 
+      console.log('Loaded emotions:', data);
       setEmotions(data || []);
     } catch (error) {
       console.error('Error fetching emotions:', error);
@@ -57,6 +58,16 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
 
     try {
       setIsSubmitting(true);
+      
+      // หาอารมณ์เริ่มต้นถ้าไม่มีการเลือก
+      let finalEmotionId = emotionId;
+      if (!finalEmotionId) {
+        // พยายามใช้อารมณ์ 'neutral' เป็นค่าเริ่มต้น
+        const neutralEmotion = await getEmotionByName('neutral');
+        if (neutralEmotion) {
+          finalEmotionId = neutralEmotion.id;
+        }
+      }
 
       const { data, error } = await supabase
         .from('words')
@@ -64,7 +75,7 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
           {
             word: wordText.trim(),
             meaning: meaning.trim() || null,
-            emotion_id: emotionId,
+            emotion_id: finalEmotionId,
             approved: false,
           },
         ])
@@ -78,7 +89,7 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
       toast.success('เพิ่มคำสำเร็จ');
       onSuccess();
       
-      // Reset form
+      // รีเซ็ตฟอร์ม
       setWordText('');
       setMeaning('');
       setEmotionId(null);
@@ -152,3 +163,4 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
 };
 
 export default WordAddModal;
+
