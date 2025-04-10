@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, fetchEmotions } from '../../lib/supabaseClient';
 import { Word, Emotion } from '../../types/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -28,23 +28,16 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
   const [loadingEmotions, setLoadingEmotions] = useState(true);
 
   useEffect(() => {
-    fetchEmotions();
+    loadEmotions();
   }, []);
 
-  const fetchEmotions = async () => {
+  const loadEmotions = async () => {
     try {
       setLoadingEmotions(true);
-      const { data, error } = await supabase
-        .from('emotions')
-        .select('*')
-        .order('name');
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Loaded emotions:', data);
-      setEmotions(data || []);
+      // ใช้ฟังก์ชั่นดึงข้อมูลอารมณ์ที่ปรับปรุงแล้ว
+      const emotionsData = await fetchEmotions();
+      console.log('Loaded emotions:', emotionsData);
+      setEmotions(emotionsData || []);
     } catch (error) {
       console.error('Error fetching emotions:', error);
       toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
@@ -61,6 +54,22 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
 
     try {
       setIsSubmitting(true);
+
+      // ตรวจสอบว่ามีคำนี้อยู่แล้วหรือไม่ (ยกเว้นคำปัจจุบัน)
+      if (wordText !== word.word) {
+        const { data: existingWord } = await supabase
+          .from('words')
+          .select('id')
+          .eq('word', wordText.trim())
+          .neq('id', word.id)
+          .maybeSingle();
+        
+        if (existingWord) {
+          toast.error('คำนี้มีอยู่ในระบบแล้ว');
+          setIsSubmitting(false);
+          return;
+        }
+      }
 
       const { data, error } = await supabase
         .from('words')
@@ -159,4 +168,3 @@ const WordEditModal: React.FC<WordEditModalProps> = ({ isOpen, onClose, onSucces
 };
 
 export default WordEditModal;
-

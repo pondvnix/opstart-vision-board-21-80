@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, deleteWordAndRelatedRecords, fetchEmotions } from '../../lib/supabaseClient';
 import { Word, Emotion } from '../../types/supabase';
 import WordAddModal from './WordAddModal';
 import WordEditModal from './WordEditModal';
@@ -16,21 +16,14 @@ const WordManagement: React.FC = () => {
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
 
   useEffect(() => {
-    fetchEmotions();
+    fetchEmotionsData();
     fetchWords();
   }, []);
 
-  const fetchEmotions = async () => {
+  const fetchEmotionsData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('emotions')
-        .select('*');
-
-      if (error) {
-        throw error;
-      }
-
-      setEmotions(data || []);
+      const emotionsData = await fetchEmotions();
+      setEmotions(emotionsData);
     } catch (error) {
       console.error('Error fetching emotions:', error);
       toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
@@ -77,17 +70,21 @@ const WordManagement: React.FC = () => {
 
   const deleteWord = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('words')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        throw error;
+      const word = words.find(w => w.id === id);
+      if (!word) {
+        console.log('Word not found for deletion:', id);
+        toast.error('ไม่พบคำที่ต้องการลบ');
+        return;
       }
-
-      setWords(words.filter(word => word.id !== id));
-      toast.success('ลบคำสำเร็จ');
+      
+      const success = await deleteWordAndRelatedRecords(id);
+      
+      if (success) {
+        setWords(words.filter(word => word.id !== id));
+        toast.success('ลบคำสำเร็จ');
+      } else {
+        toast.error('ไม่สามารถลบคำได้');
+      }
     } catch (error) {
       console.error('Error deleting word:', error);
       toast.error('ไม่สามารถลบคำได้');

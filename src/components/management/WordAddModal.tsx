@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase, getEmotionByName } from '../../lib/supabaseClient';
+import { supabase, fetchEmotions, createEmotionIfNotExists } from '../../lib/supabaseClient';
 import { Emotion } from '../../types/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -25,23 +25,16 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
   const [loadingEmotions, setLoadingEmotions] = useState(true);
 
   useEffect(() => {
-    fetchEmotions();
+    loadEmotions();
   }, []);
 
-  const fetchEmotions = async () => {
+  const loadEmotions = async () => {
     try {
       setLoadingEmotions(true);
-      const { data, error } = await supabase
-        .from('emotions')
-        .select('*')
-        .order('name');
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Loaded emotions:', data);
-      setEmotions(data || []);
+      // ใช้ฟังก์ชั่นดึงข้อมูลอารมณ์ที่ปรับปรุงแล้ว
+      const emotionsData = await fetchEmotions();
+      console.log('Loaded emotions:', emotionsData);
+      setEmotions(emotionsData || []);
     } catch (error) {
       console.error('Error fetching emotions:', error);
       toast.error('ไม่สามารถโหลดข้อมูลอารมณ์ได้');
@@ -62,11 +55,25 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
       // หาอารมณ์เริ่มต้นถ้าไม่มีการเลือก
       let finalEmotionId = emotionId;
       if (!finalEmotionId) {
-        // พยายามใช้อารมณ์ 'neutral' เป็นค่าเริ่มต้น
-        const neutralEmotion = await getEmotionByName('neutral');
+        // สร้างหรือดึงอารมณ์ 'neutral' เป็นค่าเริ่มต้น
+        const neutralEmotion = await createEmotionIfNotExists('neutral', 'อารมณ์เป็นกลาง');
         if (neutralEmotion) {
           finalEmotionId = neutralEmotion.id;
         }
+      }
+
+      // ตรวจสอบว่ามีคำนี้อยู่แล้วหรือไม่
+      const { data: existingWord } = await supabase
+        .from('words')
+        .select('id')
+        .eq('word', wordText.trim())
+        .maybeSingle();
+      
+      if (existingWord) {
+        console.log('Word already exists with ID:', existingWord.id);
+        toast.error('คำนี้มีอยู่ในระบบแล้ว');
+        setIsSubmitting(false);
+        return;
       }
 
       const { data, error } = await supabase
@@ -163,4 +170,3 @@ const WordAddModal: React.FC<WordAddModalProps> = ({ isOpen, onClose, onSuccess 
 };
 
 export default WordAddModal;
-
